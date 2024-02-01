@@ -1,10 +1,14 @@
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 import {IInputs, IOutputs} from "./generated/ManifestTypes";
+import App from './src/App';
 
 export class PCTPCF implements ComponentFramework.StandardControl<IInputs, IOutputs> {
 
     /**
      * Empty constructor.
      */
+    private container: HTMLDivElement;
     constructor()
     {
 
@@ -21,6 +25,7 @@ export class PCTPCF implements ComponentFramework.StandardControl<IInputs, IOutp
     public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container:HTMLDivElement): void
     {
         // Add control initialization code
+        this.container = container;
     }
 
 
@@ -31,6 +36,7 @@ export class PCTPCF implements ComponentFramework.StandardControl<IInputs, IOutp
     public updateView(context: ComponentFramework.Context<IInputs>): void
     {
         // Add code to update control view
+        ReactDOM.render(React.createElement(App, {context: context }), this.container);
     }
 
     /**
