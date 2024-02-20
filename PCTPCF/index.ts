@@ -36,6 +36,7 @@ export class PCTPCF implements ComponentFramework.StandardControl<IInputs, IOutp
     public updateView(context: ComponentFramework.Context<IInputs>): void
     {
         // Add code to update control view
+        console.log("Trigger");
         ReactDOM.render(React.createElement(App, {context: context }), this.container);
     }
 
