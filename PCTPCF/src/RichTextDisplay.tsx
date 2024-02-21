@@ -1,5 +1,5 @@
 import { DISPLAY_STYLES } from "./RichTextStyles";
-import React = require("react");
+import React from "react";
 
 type Props = Readonly<{
   value: string;

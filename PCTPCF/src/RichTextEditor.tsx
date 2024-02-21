@@ -67,7 +67,6 @@ type Props = Readonly<{
 
 export default function RichTextEditor({ disabled, ...props }: Props) {
   // useMicrosoftTestDriveFocusCaptureFix();
-  console.log("Trigger 3");
 
   const d = useIsDisabled();
   return (
@@ -85,14 +84,14 @@ function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disa
     editor.setEditable(!disabled);
   }, [editor, disabled]);
 
-  // useEffect(() => {
-  //   if (value === cache.current) {
-  //     return;
-  //   }
+  useEffect(() => {
+    if (value === cache.current) {
+      return;
+    }
 
-  //   cache.current = value;
-  //   editor.dispatchCommand(SET_HTML_COMMAND, value);
-  // }, [editor, value, cache]);
+    cache.current = value;
+    editor.dispatchCommand(SET_HTML_COMMAND, value);
+  }, [editor, value, cache]);
 
   return (
     <>
@@ -159,7 +158,7 @@ function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disa
                   }
                 }}
                 className={`${DISPLAY_STYLES} ${disabled ? "" : EDITOR_STYLES}`}
-                style={{ minHeight, maxHeight, overflowY: "scroll", padding: 2 }}
+                style={{ minHeight, maxHeight, overflowY: "scroll", padding: 2, textAlign: "left" }}
               />
             }
             placeholder={
