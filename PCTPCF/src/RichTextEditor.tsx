@@ -138,12 +138,12 @@ function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disa
             <AlignmentButton format="center" disabled={disabled} />
             <AlignmentButton format="right" disabled={disabled} />
           </Flex>
-          {/* <WhenInRole SuperAdmin> */}
+          {/* <WhenInRole SuperAdmin>
             <div className="vr"></div>
             <Flex gap={2}>
               <ImageButton disabled={disabled} />
             </Flex>
-          {/* </WhenInRole> */}
+          </WhenInRole> */}
         </Flex>
         <div style={{ position: "relative" }}>
           <RichTextPlugin
