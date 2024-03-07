@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -56,6 +57,12 @@ const EDITOR_CONFIG: InitialConfigType = {
   namespace: "",
 };
 
+declare global {
+  interface Window {
+    Xrm: any;
+  }
+}
+
 type Props = Readonly<{
   value?: string;
   onBlur?: (html: string) => void;
@@ -66,7 +73,53 @@ type Props = Readonly<{
 }>;
 
 export default function RichTextEditor({ disabled, ...props }: Props) {
+  // const [copyNotAllowed, setCopyNotAllowed] = useState<string>("Copying questions is not allowed on this webpage");
+  // const [apiNotSupport, setApiNotSupport] = useState<string>("Permissions API not supported")
+  // const [grantPermission, setGrantPermission] = useState<string>("You need to grant permission to copy on this webpage")
+
   // useMicrosoftTestDriveFocusCaptureFix();
+
+  //Code to load the resources for the language translations.
+//   const loadResourceString = async () => {
+//     const url = await window.parent.Xrm.Utility.getGlobalContext().getClientUrl();
+//     const language = await window.parent.Xrm.Utility.getGlobalContext().userSettings.languageId
+//     const webResourceUrl = `${url}/WebResources/gyde_localizedstrings.${language}.resx`;
+
+//     try {
+//         const response = await fetch(`${webResourceUrl}`);
+//         const data = await response.text();
+//         const filterKeys = ['copyingnotallowed', 'permissionapinotsupport', 'grantpermission']; // Replace with the key you want to filter
+//         filterKeys.map((filterKey: string, index: number) => {
+//             const parser = new DOMParser();
+//             const xmlDoc = parser.parseFromString(data, "text/xml");
+//             const dataNode: any = xmlDoc.querySelector(`data[name="${filterKey}"]`);
+//             const value: any = dataNode?.querySelector("value").textContent;
+
+//             if (index === 0) {
+//                 setCopyNotAllowed(value)
+//             }
+//             if (index === 1) {
+//                 setApiNotSupport(value)
+//             }
+//             if (index === 2) {
+//                 setGrantPermission(value)
+//             }
+//             console.log('data ====> ',  index, value); 
+//         });
+//     } catch (error) {
+//         console.error('Error loading data:', error);
+//     }
+// }
+
+// const messageHandler = async() => {
+//     try {
+//         await loadResourceString();
+//     } catch (error) {
+//         console.log('error ====>', error);
+//     }
+// }
+
+
 
   const d = useIsDisabled();
   return (
@@ -76,22 +129,95 @@ export default function RichTextEditor({ disabled, ...props }: Props) {
   );
 }
 
-function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disabled = false }: Props) {
+function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = false }: Props) {
   const [editor] = useLexicalComposerContext();
   const cache = useRef<string | null | undefined>();
+  const [isDisable, setIsDisable] = useState<boolean>(false);
+  const [value, setValue] = useState("");
+  // const [isInitial, setIsInitial] = useState(true);
+
+  const retrieveTemplateHandler = async () => {
+    try{
+      var surveyTemplate = await window.parent.Xrm.Page.getAttribute("gyde_surveytemplate")?.getValue()[0]?.id?.replace("{","")
+      .replace("}", "");
+      // console.log('id ===> ', surveyTemplate);
+
+      window.parent.Xrm.WebApi.retrieveRecord("gyde_surveytemplate", surveyTemplate, "?$select=statuscode").then(
+        function success(result: any) {
+            console.log("result status ====>", result.statuscode);
+            if (result.statuscode == 528670003 || result.statuscode == 528670005) {
+              setIsDisable(true)
+            } else {
+              setIsDisable(false);
+            }
+        },
+        function (error: any) {
+            console.log("error message ====> ", error.message);
+            setIsDisable(false);
+        }
+      );
+    } catch(error: any) {
+      console.log("Error Message (catch) ==>", error.message);
+      setIsDisable(false)
+    }
+  }
+
+  const dataRetriveHandler = async () => {
+    try{
+      const content = await window.parent.Xrm.Page.getAttribute("gyde_headertext").getValue();
+      // console.log("Content ==> ", content);
+      setValue(content);
+      // console.log("Value when The data is set",value)
+      // cache.current = content;
+      // console.log("Cache ==>", cache.current);
+    } catch(error: any) {
+      console.log("Loading Error", error);
+    }
+  }
+
+  const handleChange = async (html: any) => {
+    // console.log("html===================", html);
+    setValue(html);
+    // console.log("Html value of ===>",value)
+    const xrmReq = await  window.parent.Xrm.Page.getAttribute("gyde_headertext").setValue(html);
+    // console.log("XRM", xrmReq);
+  }
+
+  useEffect(() => {
+    retrieveTemplateHandler();
+  },[]);
+
+  useEffect(() => {
+    // console.log('======ww=====> ', value);
+    if ((!value || (value == '') || !cache.current || cache.current == "") ) {
+      // console.log("Hajskaj")
+      dataRetriveHandler();
+    }
+  }, []);
 
   useEffect(() => {
     editor.setEditable(!disabled);
   }, [editor, disabled]);
 
   useEffect(() => {
-    if (value === cache.current) {
+    if (value === undefined || value === cache.current) {
       return;
     }
 
+    // if (!isInitial) {
+    //   cache.current = value;
+    //   editor.dispatchCommand(SET_HTML_COMMAND, value);
+    // }
+    // setIsInitial(false);
+    // console.log("The value in the useEffect", value);
+    
     cache.current = value;
+
     editor.dispatchCommand(SET_HTML_COMMAND, value);
   }, [editor, value, cache]);
+
+  // console.log('swsw ===>', cache.current);
+  
 
   return (
     <>
@@ -100,12 +226,52 @@ function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disa
       <HistoryPlugin />
       <LexicalImagesPlugin />
       <DragDropPaste />
-      <Flex vertical gap="middle">
-        <Flex wrap="wrap" align="center" gap="small">
+      <Flex vertical gap="middle" className="editor-container">
+        <div style={{ position: "relative" }} >
+          <RichTextPlugin
+            
+            contentEditable={
+              <ContentEditable
+                onBlur={() => {
+                  // console.log('wwwwwwww');
+                  editor.getEditorState().read(() => {
+                    const htmlString = $generateHtmlFromNodes(editor);
+                    // console.log('swrwswew==> ', htmlString);
+                    
+
+                    cache.current = htmlString;
+                    handleChange(htmlString);
+                    // onBlur(htmlString);
+                  });
+                  // if (onBlur != null) {
+                  //   editor.getEditorState().read(() => {
+                  //     const htmlString = $generateHtmlFromNodes(editor);
+                  //     console.log('swrwswew==> ', htmlString);
+                      
+
+                  //     cache.current = htmlString;
+                  //     onBlur(htmlString);
+                  //   });
+                  // }
+                }}
+                className={`${DISPLAY_STYLES} ${disabled ? "" : EDITOR_STYLES}`}
+                style={{ minHeight, maxHeight, overflowY: "scroll", padding: 2, textAlign: "left", color: "black" }}
+                // onChange={ handleChange }
+              />
+            }
+            placeholder={
+              <div style={{ position: "absolute", top: 2, left: 4, pointerEvents: "none", opacity: 0.5 }}>
+                {placeholder}
+              </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+        </div>
+        <Flex wrap="wrap" align="center" gap="small" className="toolbar">
           <TypeFormatDropdown disabled={disabled} />
           <div className="vr"></div>
           <Flex gap={2}>
-            <FormatButton format="bold" disabled={disabled}>
+            <FormatButton format="bold" disabled={disabled} >
               <BoldOutlined rev={undefined} />
             </FormatButton>
             <FormatButton format="italic" disabled={disabled}>
@@ -144,31 +310,6 @@ function Internal({ value, onBlur, placeholder, minHeight = 100, maxHeight, disa
             </Flex>
           </WhenInRole> */}
         </Flex>
-        <div style={{ position: "relative" }}>
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                onBlur={() => {
-                  if (onBlur != null) {
-                    editor.getEditorState().read(() => {
-                      const htmlString = $generateHtmlFromNodes(editor);
-                      cache.current = htmlString;
-                      onBlur(htmlString);
-                    });
-                  }
-                }}
-                className={`${DISPLAY_STYLES} ${disabled ? "" : EDITOR_STYLES}`}
-                style={{ minHeight, maxHeight, overflowY: "scroll", padding: 2, textAlign: "left" }}
-              />
-            }
-            placeholder={
-              <div style={{ position: "absolute", top: 2, left: 4, pointerEvents: "none", opacity: 0.5 }}>
-                {placeholder}
-              </div>
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-        </div>
       </Flex>
     </>
   );
