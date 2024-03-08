@@ -17,4 +17,6 @@
 
 .toolbar {
     position: relative;
+    padding: 6px 8px 2px;
+    border-top: 1px solid #d1d1d1;
 }  

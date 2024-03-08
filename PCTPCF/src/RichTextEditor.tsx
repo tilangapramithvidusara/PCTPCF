@@ -179,7 +179,15 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
     // console.log("html===================", html);
     setValue(html);
     // console.log("Html value of ===>",value)
-    const xrmReq = await  window.parent.Xrm.Page.getAttribute("gyde_headertext").setValue(html);
+    const blob = new Blob([html], {type: "text/html"});
+    const htmlFile = new File([blob], 'HeaderText.html',{type: 'text/html'});
+    console.log("Html File", htmlFile);
+    try {
+      const xrmReq = await  window.parent.Xrm.Page.getAttribute("gyde_headertext").setValue(html);
+    } catch(error) {
+      console.error("Error setting value to Xrm attribute", error)
+    }
+    
     // console.log("XRM", xrmReq);
   }
 
@@ -261,7 +269,7 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
             }
             placeholder={
               <div style={{ position: "absolute", top: 2, left: 4, pointerEvents: "none", opacity: 0.5 }}>
-                {placeholder}
+                {placeholder + "Enter text..."}
               </div>
             }
             ErrorBoundary={LexicalErrorBoundary}
