@@ -53,6 +53,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\PCTPCF.pcfproj" />
+    <ProjectReference Include="../PCTPCF.pcfproj" />
   </ItemGroup>
 
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

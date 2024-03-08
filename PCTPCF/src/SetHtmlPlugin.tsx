@@ -39,6 +39,7 @@ export default function () {
             paragraph.select();
           } else {
             const parser = new DOMParser();
+            
             const dom = parser.parseFromString(payload, "text/html");
             const nodes = $generateNodesFromDOM(editor, dom);
 

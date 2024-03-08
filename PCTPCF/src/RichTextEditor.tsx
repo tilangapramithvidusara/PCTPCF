@@ -9,6 +9,7 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import type { InitialConfigType } from "@lexical/react/LexicalComposer";
 import { $generateHtmlFromNodes } from "@lexical/html";
+import { $generateNodesFromDOM } from "@lexical/html";
 
 import { theme } from "./RichTextTheme";
 import { Flex, notification } from "antd";
@@ -43,6 +44,11 @@ import SetHtmlPlugin, { SET_HTML_COMMAND } from "./SetHtmlPlugin";
 // import { UserCurrent } from "./atoms/User";
 // import { Role } from "./enums/Role";
 import React from "react";
+import { LogicalNames, NameMapper } from "./constants";
+import { convertBase64ToJson, convertJsonToBase64 } from "./utils/file";
+import { createAnnotationRecord, retrieveSurveyTemplateChapter, updateAnnotationRecord } from "./apis";
+import Loader from "./Loader";
+import { $createParagraphNode, $getRoot } from "lexical";
 
 const EDITOR_CONFIG: InitialConfigType = {
   // The editor theme
@@ -134,15 +140,65 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
   const cache = useRef<string | null | undefined>();
   const [isDisable, setIsDisable] = useState<boolean>(false);
   const [value, setValue] = useState("");
+  const [currentLocationName, setCurrentLocationName] = useState<"gyde_surveytemplatechapter" | "gyde_surveytemplatechaptersection">();
+  const [currentLocationId, setCurrentLocationId] = useState<string>();
+  const [annotationId, setAnnotationId] = useState<string | null>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDataRetriveCompleted, setIsDataRetriveCompleted] = useState<boolean>(false);
   // const [isInitial, setIsInitial] = useState(true);
 
   const retrieveTemplateHandler = async () => {
     try{
+      const currentLocation = await window.parent.Xrm.Page.ui._formContext.contextToken.entityTypeName;
+      setCurrentLocationName(currentLocation);
+      const currentEntityId = await window.parent.Xrm.Page.data.entity
+      .getId()
+      .replace("{", "")
+      .replace("}", "");
+      setCurrentLocationId(currentEntityId);
       var surveyTemplate = await window.parent.Xrm.Page.getAttribute("gyde_surveytemplate")?.getValue()[0]?.id?.replace("{","")
       .replace("}", "");
       // console.log('id ===> ', surveyTemplate);
 
-      window.parent.Xrm.WebApi.retrieveRecord("gyde_surveytemplate", surveyTemplate, "?$select=statuscode").then(
+      const response = await retrieveSurveyTemplateChapter({
+        currentLocationId: currentEntityId,
+        objecttypecode: currentLocation,
+      })
+      console.log('response data retrive ==> ', response)
+      if (!response?.error) {
+        setAnnotationId(response?.result?.annotationid);
+        // if (response?.result?.documentbody) 
+        let content = '';
+        if (response?.result?.documentbody)
+          content = await convertBase64ToJson(response?.result?.documentbody);
+        console.log('content ==> ', content);
+        await Promise.allSettled([content]);
+        editor.update(() => {
+          const root = $getRoot();
+          root.clear();
+          console.log('cont2222 =...', content);
+          
+          if (content == null) {
+            const paragraph = $createParagraphNode();
+            root.append(paragraph);
+            paragraph.select();
+          } else {
+            const parser = new DOMParser();
+            
+            const dom = parser.parseFromString(content, "text/html");
+            const nodes = $generateNodesFromDOM(editor, dom);
+
+            root.append(...nodes);
+            nodes[nodes.length - 1]?.selectEnd();
+          }
+        });
+        // editor.dispatchCommand(SET_HTML_COMMAND, content);
+        setValue(content)
+        cache.current = content;        
+        setIsDataRetriveCompleted(true);
+      }
+
+      await window.parent.Xrm.WebApi.retrieveRecord("gyde_surveytemplate", surveyTemplate, "?$select=statuscode").then(
         function success(result: any) {
             console.log("result status ====>", result.statuscode);
             if (result.statuscode == 528670003 || result.statuscode == 528670005) {
@@ -156,17 +212,25 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
             setIsDisable(false);
         }
       );
+      setIsLoading(false)
     } catch(error: any) {
       console.log("Error Message (catch) ==>", error.message);
       setIsDisable(false)
+      setIsLoading(false)
+      setIsDataRetriveCompleted(true);
     }
   }
 
   const dataRetriveHandler = async () => {
     try{
-      const content = await window.parent.Xrm.Page.getAttribute("gyde_headertext").getValue();
+      // const response = await retrieveSurveyTemplateChapter({
+      //   currentLocationId: currentLocationId!,
+      //   objecttypecode: currentLocationName!,
+      // })
+      // console.log('response data retrive ==> ', response)
+      // const content = await window.parent.Xrm.Page.getAttribute("gyde_headertext").getValue();
       // console.log("Content ==> ", content);
-      setValue(content);
+      // setValue(content);
       // console.log("Value when The data is set",value)
       // cache.current = content;
       // console.log("Cache ==>", cache.current);
@@ -175,32 +239,95 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
     }
   }
 
+  const saveAsHtmlFile = async(htmlContent: string) => {
+    // Create a Blob object from the HTML content
+    const base64Data = await convertJsonToBase64(htmlContent)
+    console.log('dadadadad', base64Data)
+    const documentbody = base64Data;
+    let filename = ''
+    let subject = '';
+    let bind = `objectid_${currentLocationName}@odata.bind`;
+    if (LogicalNames?.CHAPTER === currentLocationName || LogicalNames?.SECTION === currentLocationName) {
+      subject = NameMapper[currentLocationName];
+      filename = `${currentLocationName} header text`;
+    }
+
+    if (!annotationId) {
+      const response = await createAnnotationRecord({
+        documentbody,
+        subject,
+        filename,
+        objecttypecode: currentLocationName!,
+        bind,
+        currentLocationId: currentLocationId!,
+      });
+      console.log('response of save ==> ', response);
+      
+      if (!response.error) {
+        setAnnotationId(response?.result?.id);
+      }
+    } else {
+      const response = await updateAnnotationRecord({
+        annotationId,
+        documentbody: base64Data,
+      });
+      console.log('response update ==> ', response);
+      
+    }
+    
+
+    // createAnnotationRecord
+    // const blob = new Blob([htmlContent], { type: 'text/html' });
+
+    // // Create a URL for the Blob object
+    // const url = URL.createObjectURL(blob);
+
+    // // Create a link element
+    // const link = document.createElement('a');
+    // link.href = url;
+    // link.download = 'HeaderText.html'; // Specify the filename here
+    // document.body.appendChild(link);
+
+    
+    
+    // const title: string | undefined = currentLocationName && NameMapper?.[currentLocationName];
+    // // Programmatically click the link to trigger the download
+    // link.click();
+
+    // // Remove the link element from the DOM
+    // document.body.removeChild(link);
+
+    // // Revoke the URL to release the object resources
+    // URL.revokeObjectURL(url);
+  };
+
   const handleChange = async (html: any) => {
-    // console.log("html===================", html);
+    console.log("html===================", html);
     setValue(html);
-    // console.log("Html value of ===>",value)
-    const xrmReq = await  window.parent.Xrm.Page.getAttribute("gyde_headertext").setValue(html);
+    saveAsHtmlFile(html);
+    // const xrmReq = await  window.parent.Xrm.Page.getAttribute("gyde_headertext").setValue(html);
     // console.log("XRM", xrmReq);
   }
 
   useEffect(() => {
+    setIsLoading(true);
     retrieveTemplateHandler();
   },[]);
 
-  useEffect(() => {
-    // console.log('======ww=====> ', value);
-    if ((!value || (value == '') || !cache.current || cache.current == "") ) {
-      // console.log("Hajskaj")
-      dataRetriveHandler();
-    }
-  }, []);
+  // useEffect(() => {
+  //   // console.log('======ww=====> ', value);
+  //   if ((!value || (value == '') || !cache.current || cache.current == "") ) {
+  //     // console.log("Hajskaj")
+  //     dataRetriveHandler();
+  //   }
+  // }, []);
 
   useEffect(() => {
     editor.setEditable(!disabled);
   }, [editor, disabled]);
 
   useEffect(() => {
-    if (value === undefined || value === cache.current) {
+    if (value === undefined || value === cache.current || cache?.current === undefined) {
       return;
     }
 
@@ -210,17 +337,19 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
     // }
     // setIsInitial(false);
     // console.log("The value in the useEffect", value);
-    
-    cache.current = value;
-
-    editor.dispatchCommand(SET_HTML_COMMAND, value);
-  }, [editor, value, cache]);
-
-  // console.log('swsw ===>', cache.current);
-  
+    // console.log('x ===> ', value);
+    // setValue('<p class="editor-paragraph" dir="ltr"><span style="white-space: pre-wrap;">swdwf</span></p> <p class="editor-paragraph" dir="ltr"><span style="white-space: pre-wrap;">swdwf</span></p>');
+    // cache.current = '<p class="editor-paragraph" dir="ltr"><span style="white-space: pre-wrap;">swdwf</span></p> <p class="editor-paragraph" dir="ltr"><span style="white-space: pre-wrap;">swdwf</span></p>'
+    // // value;
+    if (!isLoading && isDataRetriveCompleted) {      
+      editor.dispatchCommand(SET_HTML_COMMAND, value || cache?.current);
+    }
+  }, [editor, value, cache, cache.current, isLoading, isDataRetriveCompleted]);  
 
   return (
     <>
+    {isLoading ? (<Loader/>) : (
+    <div>
       <SetHtmlPlugin />
       <ListPlugin />
       <HistoryPlugin />
@@ -229,9 +358,9 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
       <Flex vertical gap="middle" className="editor-container">
         <div style={{ position: "relative" }} >
           <RichTextPlugin
-            
             contentEditable={
               <ContentEditable
+                defaultValue={cache.current || value}
                 onBlur={() => {
                   // console.log('wwwwwwww');
                   editor.getEditorState().read(() => {
@@ -240,7 +369,8 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
                     
 
                     cache.current = htmlString;
-                    handleChange(htmlString);
+                    if (!isLoading)
+                      handleChange(htmlString);
                     // onBlur(htmlString);
                   });
                   // if (onBlur != null) {
@@ -257,6 +387,7 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
                 className={`${DISPLAY_STYLES} ${disabled ? "" : EDITOR_STYLES}`}
                 style={{ minHeight, maxHeight, overflowY: "scroll", padding: 2, textAlign: "left", color: "black" }}
                 // onChange={ handleChange }
+                value={cache?.current || value}
               />
             }
             placeholder={
@@ -264,6 +395,7 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
                 {placeholder}
               </div>
             }
+            
             ErrorBoundary={LexicalErrorBoundary}
           />
         </div>
@@ -311,6 +443,8 @@ function Internal({onBlur, placeholder, minHeight = 100, maxHeight, disabled = f
           </WhenInRole> */}
         </Flex>
       </Flex>
+    </div>
+    )}
     </>
   );
 }

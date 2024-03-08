@@ -10,12 +10,14 @@
     "rebuild": "pcf-scripts rebuild",
     "start": "pcf-scripts start",
     "start:watch": "pcf-scripts start watch",
-    "refreshTypes": "pcf-scripts refreshTypes"
+    "refreshTypes": "pcf-scripts refreshTypes",
+    "release": "cd PCTPCFSolution && pac solution add-reference --path ../ && dotnet msbuild /t:restore && dotnet msbuild /p:configuration=Release"
   },
   "dependencies": {
     "@emotion/css": "^11.11.2",
     "@lexical/react": "^0.13.1",
     "antd": "^5.14.1",
+    "buffer": "^6.0.3",
     "emotion": "^11.0.0",
     "jotai": "^2.6.4",
     "json-logic-js": "^2.0.2",
