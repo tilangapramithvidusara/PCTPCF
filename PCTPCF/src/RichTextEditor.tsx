@@ -398,7 +398,7 @@ function Internal({
             </>
           )}
 
-          <Flex vertical gap="middle" className="editor-container">
+          <Flex vertical className="editor-container">
             <div style={{ position: "relative" }}>
               <RichTextPlugin
                 contentEditable={
@@ -429,11 +429,12 @@ function Internal({
                     }`}
                     style={{
                       minHeight,
-                      maxHeight,
-                      overflowY: "scroll",
-                      padding: 2,
+                      maxHeight: 150,
+                      overflowY: "auto",
+                      padding: 8,
                       textAlign: "left",
                       color: "black",
+                      fontSize: 14
                     }}
                     // onChange={ handleChange }
                     value={cache?.current || value}
@@ -443,10 +444,11 @@ function Internal({
                   <div
                     style={{
                       position: "absolute",
-                      top: 2,
-                      left: 4,
+                      top: 6,
+                      left: 6,
                       pointerEvents: "none",
                       opacity: 0.5,
+                      fontSize: 14
                     }}
                   >
                     {placeholder + "Enter Text..."}
@@ -459,7 +461,7 @@ function Internal({
               <Flex wrap="wrap" align="center" gap="small" className="toolbar">
                 <TypeFormatDropdown disabled={disabled} />
                 <div className="vr"></div>
-                <Flex gap={2}>
+                <Flex gap={2} className="custom-button">
                   <FormatButton format="bold" disabled={disabled}>
                     <BoldOutlined rev={undefined} />
                   </FormatButton>
@@ -477,7 +479,7 @@ function Internal({
                 {isExpand ? (
                   <>
                     <div className="vr"></div>
-                    <Flex gap={2}>
+                    <Flex gap={2} className="custom-button">
                       <TypeFormatButton
                         format={TypeFormat.Quote}
                         disabled={disabled}
@@ -499,20 +501,20 @@ function Internal({
                       </TypeFormatButton>
                     </Flex>
                     <div className="vr"></div>
-                    <Flex gap={2}>
+                    <Flex gap={2} className="custom-button">
                       <AlignmentButton format="left" disabled={disabled} />
                       <AlignmentButton format="center" disabled={disabled} />
                       <AlignmentButton format="right" disabled={disabled} />
                     </Flex>
                     <div className="vr"></div>
-                    <Flex gap={2}>
+                    <Flex gap={2} className="custom-button">
                       <ImageButton disabled={disabled} />
                     </Flex>
                   </>
                 ) : (
                   <>
                     <div className="vr"></div>
-                    <Flex gap={2}>
+                    <Flex gap={2} className="custom-button">
                       <Button
                         icon={icon}
                         size="small"

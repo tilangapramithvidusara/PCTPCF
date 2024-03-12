@@ -74,7 +74,7 @@ export default function TypeFormatDropdown({ disabled }: Props) {
   return (
     <Select
       disabled={disabled}
-      style={{ minWidth: 150 }}
+      style={{ minWidth: 100 }}
       value={typeFormat}
       size="small"
       onChange={(x) => {
