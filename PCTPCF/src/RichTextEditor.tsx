@@ -504,6 +504,10 @@ function Internal({
                       <AlignmentButton format="center" disabled={disabled} />
                       <AlignmentButton format="right" disabled={disabled} />
                     </Flex>
+                    <div className="vr"></div>
+                    <Flex gap={2}>
+                      <ImageButton disabled={disabled} />
+                    </Flex>
                   </>
                 ) : (
                   <>
@@ -520,10 +524,7 @@ function Internal({
                 )}
 
                 {/* <WhenInRole SuperAdmin>
-            <div className="vr"></div>
-            <Flex gap={2}>
-              <ImageButton disabled={disabled} />
-            </Flex>
+            
           </WhenInRole> */}
               </Flex>
             )}

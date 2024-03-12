@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "antd";
-import SIcon from "../SIcon";
+import { FileImageOutlined } from '@ant-design/icons'
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { INSERT_IMAGE_COMMAND } from "../images/ImagesPlugin";
 import { useRef } from "react";
@@ -12,12 +12,13 @@ export default function ({ disabled }: Props) {
   const [editor] = useLexicalComposerContext();
   const fileRef = useRef<HTMLInputElement>(null);
   console.log(fileRef);
+  let icon = FileImageOutlined;
 
   return (
     <>
       <Button disabled={disabled} onClick={(e) => {
         console.log("File Ref",e )
-        fileRef.current?.click?.()}} size="small" icon={<SIcon>image</SIcon>} />
+        fileRef.current?.click?.()}} size="small" icon={ <FileImageOutlined/> } />
       <input
         ref={fileRef}
         onChange={(e) => {
