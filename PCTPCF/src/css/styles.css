@@ -10,7 +10,13 @@
 .editor-container {
     max-width: 100%;
     height: 100%;
-  }
+    border: 1px solid #d1d1d1;
+}
+
+.editor-container .ant-select-selection-item {
+    font: normal normal normal 12px Arial, Helvetica, Tahoma, Verdana, Sans-Serif;
+    font-size: 12px;
+}
 
 .custom-button button {
     margin: 0 2px;
