@@ -428,8 +428,8 @@ function Internal({
                       disabled ? "" : EDITOR_STYLES
                     }`}
                     style={{
-                      minHeight,
-                      maxHeight: 150,
+                      minHeight: 170,
+                      maxHeight: 180,
                       overflowY: "auto",
                       padding: 8,
                       textAlign: "left",
